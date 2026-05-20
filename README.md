@@ -1,4 +1,4 @@
-# gr-synth-data
+# gr-synth
 
 Greek synthetic pre-training data pipeline. Streams FineWeb-2 `ell_Grek`, rephrases each
 document through four pedagogically rich prompts (FAQ, Math, Table, Tutorial) against a
