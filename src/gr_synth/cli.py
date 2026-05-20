@@ -6,7 +6,6 @@ import asyncio
 import logging
 import random
 import statistics
-from pathlib import Path
 
 import pyarrow.parquet as pq
 import typer
@@ -24,7 +23,11 @@ _PROMPT_NAMES: tuple[str, ...] = tuple(PROMPTS.keys())
 @app.command()
 def run(
     max_docs: int | None = typer.Option(
-        None, help="Cap source docs (None = stream forever)."
+        None,
+        help=(
+            "Cap source docs with new work — i.e. docs that have at least one "
+            "prompt not yet present in the on-disk shards (None = stream forever)."
+        ),
     ),
     dry_run: bool = typer.Option(
         False, help="Write shards locally; skip Hub upload."
@@ -41,7 +44,7 @@ def run(
     )
     # Progress heartbeat: independent handler so it prints every N records
     # regardless of --verbose.
-    progress_log = logging.getLogger("gr_synth_data.progress")
+    progress_log = logging.getLogger("gr_synth.progress")
     progress_log.setLevel(logging.INFO)
     progress_log.propagate = False
     if not progress_log.handlers:
@@ -64,7 +67,7 @@ def run(
 def spot_check(
     n: int = typer.Option(50, help="Number of random records to display."),
 ) -> None:
-    """Sample N records from the latest local shards and print filter stats.
+    """Sample N records from all local shards for each prompt and print filter stats.
 
     Read a fresh slice every few hours to catch
     English drift, refusals, and template collapse.
@@ -80,11 +83,12 @@ def spot_check(
         if not shards:
             typer.echo(f"\n=== {prompt}: no shards yet ===")
             continue
-        latest = shards[-1]
-        table = pq.read_table(latest)
+        table = pq.read_table([str(s) for s in shards])
         rows = table.num_rows
+        total_size = sum(s.stat().st_size for s in shards)
         typer.echo(
-            f"\n=== {prompt}: {latest.name} ({rows} rows, {_size_str(latest)}) ==="
+            f"\n=== {prompt}: {len(shards)} shards "
+            f"({rows} rows, {_size_str(total_size)}) ==="
         )
         if rows == 0:
             continue
@@ -121,13 +125,13 @@ def _print_stats(stats: FilterStats) -> None:
         )
 
 
-def _size_str(path: Path) -> str:
-    size = path.stat().st_size
+def _size_str(size: int) -> str:
+    s = float(size)
     for unit in ("B", "KB", "MB", "GB"):
-        if size < 1024:
-            return f"{size:.1f}{unit}"
-        size /= 1024
-    return f"{size:.1f}TB"
+        if s < 1024:
+            return f"{s:.1f}{unit}"
+        s /= 1024
+    return f"{s:.1f}TB"
 
 
 if __name__ == "__main__":

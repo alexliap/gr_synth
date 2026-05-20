@@ -28,7 +28,7 @@ _PROMPT_NAMES: tuple[str, ...] = tuple(PROMPTS.keys())
 log = logging.getLogger(__name__)
 # Dedicated logger so the progress heartbeat shows up even when --verbose is off.
 # cli.py attaches a handler and pins its level to INFO with propagate=False.
-progress_log = logging.getLogger("gr_synth_data.progress")
+progress_log = logging.getLogger("gr_synth.progress")
 
 
 
@@ -38,7 +38,7 @@ async def rephrase(
     doc_text: str,
     source_id: str | int,
     settings: Settings,
-) -> dict:
+) -> Record:
     """Run a single rephrasing call against the agent."""
     result = await agent.run(PROMPTS[prompt_name].format(doc=doc_text))
 
@@ -143,6 +143,21 @@ async def run_pipeline(
     seen_counts = shard_mgr.seen_counts()
     progress_log.info("seen source_ids per prompt at startup: %s", seen_counts)
 
+    # Rehydrate each prompt's MinHashDeduper from texts already on disk for
+    # the current source_data, so near-duplicates across runs are caught.
+    for prompt_name in chosen:
+        if seen_counts.get(prompt_name, 0) == 0:
+            continue
+        rehydrated = 0
+        for text in shard_mgr.iter_existing_texts(prompt_name):
+            dedupers[prompt_name].add_and_check(text)
+            rehydrated += 1
+        progress_log.info(
+            "rehydrated dedup state for %s from %d existing records",
+            prompt_name,
+            rehydrated,
+        )
+
     pending: set[asyncio.Task[None]] = set()
     # Cap in-flight tasks so the producer doesn't outrun the workers and balloon memory.
     max_pending = max(settings.concurrency * 4, 16)
@@ -173,14 +188,13 @@ async def run_pipeline(
 
         doc_text = truncate_at_boundary(doc["text"], settings.max_input_chars)
         # alexliap/high-quality-gr-text has no `id`; `url` is the stable identifier.
-        source_id = doc.get("url") or doc.get("id") or docs_seen
-        sid_str = str(source_id)
+        source_id = doc.get("url")
 
         # Per-prompt resume gate: skip prompts whose on-disk shards already
         # contain this source_id. Count skips per prompt for periodic logging.
         to_schedule: list[str] = []
         for p in chosen:
-            if shard_mgr.is_seen(p, sid_str):
+            if shard_mgr.is_seen(p, source_id):
                 skipped[p] += 1
             else:
                 to_schedule.append(p)

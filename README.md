@@ -2,8 +2,8 @@
 
 Greek synthetic pre-training data pipeline. Streams FineWeb-2 `ell_Grek`, rephrases each
 document through four pedagogically rich prompts (FAQ, Math, Table, Tutorial) against a
-deployed vLLM endpoint via Pydantic AI, filters the output, and pushes 5 GB parquet shards
-to the Hugging Face Hub.
+deployed vLLM endpoint via Pydantic AI, filters the output, and pushes parquet shards
+(flushed every `ROWS_PER_FLUSH` records) to the Hugging Face Hub.
 
 ## Quick start
 
@@ -23,10 +23,10 @@ uv run gr-synth spot-check --n 10
 
 ## Layout
 
-- [src/gr_synth_data/prompts.py](src/gr_synth_data/prompts.py) — the four Greek prompts.
-- [src/gr_synth_data/agent.py](src/gr_synth_data/agent.py) — Pydantic AI agent on the vLLM endpoint.
-- [src/gr_synth_data/filters.py](src/gr_synth_data/filters.py) — language-ID, format, dedup.
-- [src/gr_synth_data/shard.py](src/gr_synth_data/shard.py) — 5 GB buffered shard writer.
-- [src/gr_synth_data/cli.py](src/gr_synth_data/cli.py) — entry point.
+- [src/gr_synth/prompts.py](src/gr_synth/prompts.py) — the four Greek prompts.
+- [src/gr_synth/agent.py](src/gr_synth/agent.py) — Pydantic AI agent on the vLLM endpoint.
+- [src/gr_synth/filters.py](src/gr_synth/filters.py) — language-ID, format, dedup.
+- [src/gr_synth/shard.py](src/gr_synth/shard.py) — row-count-buffered shard writer (flushes every `ROWS_PER_FLUSH` records).
+- [src/gr_synth/cli.py](src/gr_synth/cli.py) — entry point.
 
 See `greek_synthetic_data_guide.md` for the recipe this pipeline implements.

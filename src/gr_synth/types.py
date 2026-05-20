@@ -24,6 +24,4 @@ class Record(BaseModel):
     def validate_prompt(self):
         if self.prompt not in PROMPTS.keys():
             raise ValueError(f"prompt field should be one of {sorted(PROMPTS)}, got {self.prompt}")
-        
         return self
-        

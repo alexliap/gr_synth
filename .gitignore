@@ -13,5 +13,7 @@ wheels/
 .env
 data/
 models/
+tmp/
 .vscode/
 nohup.out
+*.parquet

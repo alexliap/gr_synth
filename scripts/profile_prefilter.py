@@ -17,7 +17,7 @@ from pathlib import Path
 import polars as pl
 import regex as re
 
-# Mirror the constants from src/gr_synth_data/source.py
+# Mirror the constants from src/gr_synth/source.py
 _MIN_CHARS = 200
 _MAX_CHARS = 20_000
 _GREEK_LETTER_RATIO = 0.6

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+from collections.abc import Iterator
 from pathlib import Path
 
 import polars as pl
@@ -78,6 +79,13 @@ class ShardManager:
         """Per-prompt count of source_ids already on disk (for startup logging)."""
         return {p: len(self._seen[p]) for p in _PROMPT_NAMES}
 
+    def iter_existing_texts(self, prompt: str) -> Iterator[str]:
+        """Yield ``text`` values for the current ``source_data`` across all
+        ``part-*.parquet`` files for ``prompt``. Used to rehydrate the
+        ``MinHashDeduper`` so cross-run near-duplicate detection works."""
+        prompt_dir = self._settings.local_shard_dir / prompt
+        yield from _iter_existing_texts(prompt_dir, self._source_data)
+
     async def add(self, record: Record) -> None:
         """Append the record to its prompt's buffer; trigger a flush if over budget."""
         prompt = record.prompt
@@ -133,27 +141,38 @@ def _load_existing_source_ids(
             continue
         max_idx = max(max_idx, int(m.group(1)))
         lf = pl.scan_parquet(path)
-        cols = set(lf.collect_schema().names())
-        if "source_data" in cols:
-            sids = (
-                lf.filter(pl.col("source_data") == source_data)
-                .select("source_id")
-                .collect()
-                .get_column("source_id")
-                .drop_nulls()
-                .to_list()
-            )
-        else:
-            sids = (
-                lf.select("source_id")
-                .collect()
-                .get_column("source_id")
-                .drop_nulls()
-                .to_list()
-            )
+        sids = (
+            lf.filter(pl.col("source_data") == source_data)
+            .select("source_id")
+            .collect()
+            .get_column("source_id")
+            .drop_nulls()
+            .to_list()
+        )
         ids.update(sids)
 
     return ids, max_idx + 1
+
+
+def _iter_existing_texts(prompt_dir: Path, source_data: str) -> Iterator[str]:
+    """Stream ``text`` values for the matching ``source_data`` across all
+    ``part-*.parquet`` files under ``prompt_dir``.
+
+    Reads one parquet at a time so the full text set never lives in memory.
+    """
+    for path in sorted(prompt_dir.glob("part-*.parquet")):
+        if not _PART_RE.match(path.name):
+            continue
+        col = (
+            pl.scan_parquet(path)
+            .filter(pl.col("source_data") == source_data)
+            .select("text")
+            .collect()
+            .get_column("text")
+            .drop_nulls()
+        )
+        for v in col:
+            yield v
 
 
 def _write_parquet(records: list[Record], local_path: Path) -> None:
