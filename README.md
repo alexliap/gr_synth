@@ -1,6 +1,7 @@
 # gr-synth
 
-Greek synthetic pre-training data pipeline. Streams FineWeb-2 `ell_Grek`, rephrases each
+Greek synthetic pre-training data pipeline. Streams an `alexliap/high-quality-gr-text`
+config (`fineweb_hq_el`, `finepdfs_el`, `finewiki_el`, or `wikipedia_el`), rephrases each
 document through four pedagogically rich prompts (FAQ, Math, Table, Tutorial) against a
 deployed vLLM endpoint via Pydantic AI, filters the output, and pushes parquet shards
 (flushed every `ROWS_PER_FLUSH` records) to the Hugging Face Hub.
