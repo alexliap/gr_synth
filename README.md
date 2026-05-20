@@ -29,5 +29,3 @@ uv run gr-synth spot-check --n 10
 - [src/gr_synth/filters.py](src/gr_synth/filters.py) — language-ID, format, dedup.
 - [src/gr_synth/shard.py](src/gr_synth/shard.py) — row-count-buffered shard writer (flushes every `ROWS_PER_FLUSH` records).
 - [src/gr_synth/cli.py](src/gr_synth/cli.py) — entry point.
-
-See `greek_synthetic_data_guide.md` for the recipe this pipeline implements.
