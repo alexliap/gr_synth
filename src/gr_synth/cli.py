@@ -14,6 +14,7 @@ from .config import load_settings
 from .filters import FilterStats
 from .generate import run_pipeline
 from .prompts import PROMPTS
+from .upload import HubUploader
 
 app = typer.Typer(add_completion=False, no_args_is_help=True)
 
@@ -105,6 +106,22 @@ def spot_check(
             typer.echo(f"  --- source_id={rec.get('source_id')} ---")
             for line in head:
                 typer.echo(f"    {line}")
+
+
+@app.command("refresh-readme")
+def refresh_readme(
+    message: str = typer.Option(
+        "refresh dataset card",
+        "--message",
+        "-m",
+        help="Commit message for the README update.",
+    ),
+) -> None:
+    """Force-overwrite the dataset README on the Hub with the current template."""
+    settings = load_settings()
+    uploader = HubUploader(settings)
+    uploader.refresh_readme(commit_message=message)
+    typer.echo(f"refreshed README on {settings.hf_repo_id}")
 
 
 def _print_stats(stats: FilterStats) -> None:

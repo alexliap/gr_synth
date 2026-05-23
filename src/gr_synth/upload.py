@@ -51,9 +51,10 @@ by the `source_data` column.
 
 ## Infrastructure
 
-Generation runs on [Lightning AI](https://lightning.ai/) — the rephrasing model is
-served through a vLLM endpoint hosted on a Lightning Studio, and the pipeline streams
-the source corpus into it from a separate machine.
+Generation runs on [Lightning AI](https://lightning.ai/) — the rephrasing model,
+[`Qwen/Qwen3.5-2B`](https://huggingface.co/Qwen/Qwen3.5-2B), is served through a vLLM
+endpoint hosted on a Lightning Studio, and the pipeline streams the source corpus into
+it from a separate machine.
 
 Each subdirectory holds parquet shards for a single prompt format:
 
@@ -127,13 +128,21 @@ class HubUploader:
             log.warning("could not check README on Hub: %r", exc)
             return
 
+        self._upload_readme(commit_message="add dataset card")
+
+    def refresh_readme(self, commit_message: str | None = None) -> None:
+        """Force-overwrite the dataset card on the Hub with the current template."""
+        self._ensure_repo()
+        self._upload_readme(commit_message=commit_message or "refresh dataset card")
+
+    def _upload_readme(self, *, commit_message: str) -> None:
         readme = _README_TEMPLATE.format(repo_id=self._repo_id).encode("utf-8")
         self._api.upload_file(
             path_or_fileobj=io.BytesIO(readme),
             path_in_repo="README.md",
             repo_id=self._repo_id,
             repo_type="dataset",
-            commit_message="add dataset card",
+            commit_message=commit_message,
         )
 
     # ---- internal --------------------------------------------------------
