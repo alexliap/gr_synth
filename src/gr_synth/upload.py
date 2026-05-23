@@ -49,6 +49,12 @@ here. The remaining configs (`fineweb_hq_el`, `finepdfs_el`, `finewiki_el`) are 
 for future runs and will appear under the same prompt subdirectories, distinguishable
 by the `source_data` column.
 
+## Infrastructure
+
+Generation runs on [Lightning AI](https://lightning.ai/) — the rephrasing model is
+served through a vLLM endpoint hosted on a Lightning Studio, and the pipeline streams
+the source corpus into it from a separate machine.
+
 Each subdirectory holds parquet shards for a single prompt format:
 
 | split    | path                  |
