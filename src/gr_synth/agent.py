@@ -24,7 +24,7 @@ def build_agent(settings: Settings) -> Agent:
         timeout=Timeout(
             connect=60,
             read=600,
-            write=180,
+            write=300,
             pool=60,
         ),
     )
