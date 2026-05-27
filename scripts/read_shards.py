@@ -30,10 +30,11 @@ def main() -> None:
         return
 
     df = pl.read_parquet([str(s) for s in shards])
+    df = df.unique(subset=['source_id'])
     total_bytes = sum(s.stat().st_size for s in shards)
     print(
         f"=== {args.prompt}: {len(shards)} shard(s), "
-        f"{df.height:,} rows, {df.width} cols, {total_bytes / 1024:.1f} KB on disk ==="
+        f"{df.height:,} rows, {df.width} cols, {total_bytes / (1024**2):.1f} MB on disk ==="
     )
     print(f"columns: {df.columns}")
 
