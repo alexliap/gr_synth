@@ -240,7 +240,7 @@ def apply_all(
     deduper: MinHashDeduper,
     stats: FilterStats,
     settings: Settings,
-) -> Record | None:
+) -> tuple[Record, str]:
     """Run the full filter chain. Mutates ``record`` (adds ``language_confidence``)
     and ``stats``. Returns the surviving record or ``None``."""
     stats.seen += 1
@@ -250,7 +250,7 @@ def apply_all(
     passes_lang, confidence = is_greek(text, lid_model, settings.lid_threshold)
     if not passes_lang:
         stats.dropped_lang += 1
-        return None
+        return record, "dropped for lang"
 
     # 2. Preamble strip — mutates the text we'll save.
     text = strip_preamble(text)
@@ -258,21 +258,21 @@ def apply_all(
     # 3. Length sanity (before format so we don't run regex on empty / huge strings).
     if not length_ok(text, settings):
         stats.dropped_length += 1
-        return None
+        return record, "dropped for length"
 
     # 4. Format validation.
     prompt_name = record.prompt or ""
     if not validate_format(text, prompt_name):
         stats.dropped_format += 1
-        return None
+        return record, "dropped for format"
 
     # 5. Dedup against everything kept so far for this prompt.
     if not deduper.add_and_check(text):
         stats.dropped_dup += 1
-        return None
+        return record, "dropped for dedup"
 
     record.text = text
     record.language_confidence = confidence
     stats.lid_confidences.append(confidence)
     stats.kept += 1
-    return record
+    return record, ""

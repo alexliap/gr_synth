@@ -79,7 +79,7 @@ async def _process_one(
         )
         return
 
-    kept = apply_all(
+    record, status = apply_all(
         record,
         lid_model=lid_model,
         deduper=deduper,
@@ -96,10 +96,10 @@ async def _process_one(
             stats.dropped_format,
             stats.dropped_dup,
         )
-    if kept is None:
-        return
+    # if kept is None:
+    #     return
     try:
-        await shard_mgr.add(kept)
+        await shard_mgr.add(record, status)
     except Exception:
         log.exception(
             "shard add failed (source_id=%s, prompt=%s)", source_id, prompt_name

@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 _README_TEMPLATE = """\
 ---
-license: other
+license: apache-2.0
 language:
   - el
 task_categories:
@@ -44,10 +44,13 @@ pedagogically rich prompt formats (FAQ, Math, Table, Tutorial) — see
 ## Coverage status
 
 Source corpus: [`alexliap/high-quality-gr-text`](https://huggingface.co/datasets/alexliap/high-quality-gr-text).
-At the time of writing, only the `wikipedia_el` config has been rephrased and uploaded
-here. The remaining configs (`fineweb_hq_el`, `finepdfs_el`, `finewiki_el`) are planned
-for future runs and will appear under the same prompt subdirectories, distinguishable
-by the `source_data` column.
+Each config is rephrased separately and merged into the same prompt subdirectories; the
+originating config is preserved in the `source_data` column of every row.
+
+- [x] `wikipedia_el`
+- [x] `finewiki_el`
+- [ ] `finepdfs_el`
+- [ ] `fineweb_hq_el`
 
 ## Infrastructure
 

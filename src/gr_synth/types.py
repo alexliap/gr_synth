@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field, model_validator
+
 from .prompts import PROMPTS
 
 
@@ -18,10 +19,19 @@ class Record(BaseModel):
     model: str = Field(
         description="vLLM model id that generated ``text`` (``settings.vllm_model_id`` at run time)."
     )
-    source_data: str = Field(description="The source dataset this generated sample came from.")
+    source_data: str = Field(
+        description="The source dataset this generated sample came from."
+    )
+    failure_reason: str | None = Field(
+        default=None,
+        description="If this record was kept by filters, None. Otherwise the reason "
+        "(e.g. 'dropped for lang').",
+    )
 
     @model_validator(mode="after")
     def validate_prompt(self):
         if self.prompt not in PROMPTS.keys():
-            raise ValueError(f"prompt field should be one of {sorted(PROMPTS)}, got {self.prompt}")
+            raise ValueError(
+                f"prompt field should be one of {sorted(PROMPTS)}, got {self.prompt}"
+            )
         return self
