@@ -1,4 +1,4 @@
-"""Greek prompt templates from guide §4. Data only — no logic here.
+"""Greek prompt templates. Data only — no logic here.
 
 Use ``PROMPTS[name].replace("{doc}", doc)`` to render. Avoid ``str.format``
 because the templates may contain stray braces.

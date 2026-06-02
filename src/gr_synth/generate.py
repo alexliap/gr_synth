@@ -6,9 +6,7 @@ import asyncio
 import logging
 from typing import Any
 
-from pydantic_ai import Agent
-
-from .agent import build_agent
+from .agent import RandomAgent, build_agent
 from .config import Settings
 from .filters import (
     FilterStats,
@@ -33,7 +31,7 @@ progress_log = logging.getLogger("gr_synth.progress")
 
 
 async def rephrase(
-    agent: Agent,
+    agent: RandomAgent,
     prompt_name: str,
     doc_text: str,
     source_id: str | int,
@@ -54,7 +52,7 @@ async def rephrase(
 
 async def _process_one(
     *,
-    agent: Agent[None, str],
+    agent: RandomAgent,
     sem: asyncio.Semaphore,
     prompt_name: str,
     doc_text: str,
@@ -160,7 +158,7 @@ async def run_pipeline(
 
     pending: set[asyncio.Task[None]] = set()
     # Cap in-flight tasks so the producer doesn't outrun the workers and balloon memory.
-    max_pending = max(settings.concurrency * 4, 16)
+    max_pending = max(settings.concurrency * 2, 16)
 
     # iter_source is a sync generator pulling over the network; offload its
     # next() to a thread so a slow HTTP fetch doesn't stall the event loop.

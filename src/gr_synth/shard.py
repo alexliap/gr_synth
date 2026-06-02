@@ -8,8 +8,6 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import polars as pl
-import pyarrow as pa
-import pyarrow.parquet as pq
 
 from .config import Settings
 from .prompts import PROMPTS
@@ -19,21 +17,19 @@ from .upload import HubUploader
 _PROMPT_NAMES: tuple[str, ...] = tuple(PROMPTS.keys())
 _PART_RE = re.compile(r"part-(\d+)\.parquet$")
 
-_PARQUET_SCHEMA = pa.schema(
-    [
-        ("text", pa.string()),
-        ("source_id", pa.string()),
-        ("source_data", pa.string()),
-        ("prompt", pa.string()),
-        ("model", pa.string()),
-        ("language_confidence", pa.float32()),
-    ]
-)
+_PARQUET_SCHEMA: dict[str, pl.DataType] = {
+    "text": pl.String,
+    "source_id": pl.String,
+    "source_data": pl.String,
+    "prompt": pl.String,
+    "model": pl.String,
+    "language_confidence": pl.Float32,
+}
 
-_FAILED_SCHEMA = pa.schema([
-    *_PARQUET_SCHEMA,
-    ("failure_reason", pa.string()),
-])
+_FAILED_SCHEMA: dict[str, pl.DataType] = {
+    **_PARQUET_SCHEMA,
+    "failure_reason": pl.String,
+}
 
 
 class ShardManager:
@@ -213,13 +209,17 @@ def _iter_existing_texts(prompt_dir: Path, source_data: str) -> Iterator[str]:
             yield v
 
 
-def _write_parquet(records: list[Record], local_path: Path, schema: pa.Schema = _PARQUET_SCHEMA) -> None:
+def _write_parquet(
+    records: list[Record],
+    local_path: Path,
+    schema: dict[str, pl.DataType] = _PARQUET_SCHEMA,
+) -> None:
     """Materialise ``records`` to a parquet file under ``local_path``.
 
-    All columns in ``_PARQUET_SCHEMA`` are filled; missing keys become NULL.
+    All columns in ``schema`` are filled; missing keys become NULL.
     ``source_id`` is coerced to string so int/str sources don't break the schema.
     """
-    columns: dict[str, list] = {f.name: [] for f in schema}
+    columns: dict[str, list] = {name: [] for name in schema}
     for rec in records:
         columns["text"].append(rec.text)
         columns["source_id"].append(rec.source_id)
@@ -231,5 +231,5 @@ def _write_parquet(records: list[Record], local_path: Path, schema: pa.Schema = 
         if "failure_reason" in columns:
             columns["failure_reason"].append(rec.failure_reason)
 
-    table = pa.table(columns, schema=schema)
-    pq.write_table(table, local_path, compression="zstd")
+    df = pl.DataFrame(columns, schema=schema)
+    df.write_parquet(local_path, compression="zstd")

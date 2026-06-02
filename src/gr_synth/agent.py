@@ -1,6 +1,6 @@
-"""Pydantic AI agent wired to an OpenAI-compatible vLLM endpoint."""
+"""Pydantic AI agent wired to one or more OpenAI-compatible vLLM endpoints."""
 
-from __future__ import annotations
+import random
 
 from httpx import Timeout
 from openai import AsyncOpenAI
@@ -12,14 +12,53 @@ from .config import Settings
 from .prompts import SYSTEM_PROMPT
 
 
-def build_agent(settings: Settings) -> Agent:
-    """Construct a Pydantic AI ``Agent`` that posts to the deployed vLLM endpoint.
+class RandomAgent:
+    """Duck-typed Agent proxy that dispatches each ``run()`` call to a
+    randomly-chosen underlying ``Agent``.
+
+    Designed for two deployments: a uniform sample in ``[0, 1)`` is taken and
+    agent 1 is picked iff the sample is ``>= 0.5``, else agent 0. Falls back to
+    ``random.randrange(len(agents))`` when the pool has more than two entries.
+    """
+
+    def __init__(self, agents: list[Agent]) -> None:
+        if not agents:
+            raise ValueError("RandomAgent requires at least one Agent")
+        self._agents = agents
+        self.buckets: list[tuple[int, int]] = self._make_buckets()
+
+    async def run(self, *args, **kwargs):
+        number = random.random()
+        idx = self._is_in_bucket(number)
+        return await self._agents[idx].run(*args, **kwargs)
+
+    def _make_buckets(self):
+        n = len(self._agents)
+
+        buckets: list[tuple[int, int]] = []
+        for i in range(n):
+            low, high = i / n, min((i + 1) / n, 1)
+            buckets.append((low, high))
+
+        return buckets
+
+    def _is_in_bucket(self, number: float):
+        for i, (low, high) in enumerate(self.buckets):
+            if low <= number <= high:
+                return i
+        # Buckets tile [0, 1], so this is only reached for numbers outside that
+        # range; clamp to the last agent rather than returning None.
+        return len(self.buckets) - 1
+
+
+def _build_one_agent(base_url: str, settings: Settings) -> Agent:
+    """Construct a single Pydantic AI ``Agent`` posting to ``base_url``.
 
     Notes:
       - vLLM accepts ``repetition_penalty`` only via ``extra_body``, not as an OpenAI field.
     """
     client = AsyncOpenAI(
-        base_url=settings.vllm_base_url,
+        base_url=base_url,
         api_key=settings.vllm_api_key,
         timeout=Timeout(
             connect=60,
@@ -44,3 +83,17 @@ def build_agent(settings: Settings) -> Agent:
             "extra_body": {"repetition_penalty": settings.repetition_penalty},
         },
     )
+
+
+def build_agent(settings: Settings) -> RandomAgent:
+    """Build one ``Agent`` per port in ``settings.vllm_ports`` and wrap them in
+    a random-dispatch proxy.
+
+    Each port produces a full URL of the form ``f"{vllm_base_url}:{port}/v1"``.
+    All endpoints share ``vllm_api_key`` and ``vllm_model_id``.
+    """
+    agents = [
+        _build_one_agent(f"{settings.vllm_base_url}:{port}/v1", settings)
+        for port in settings.vllm_ports
+    ]
+    return RandomAgent(agents)

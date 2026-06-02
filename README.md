@@ -16,13 +16,22 @@ Each prompt is its own HF dataset config: `faq`, `math`, `table`, `tutorial`. Sc
 
 ```bash
 uv sync
-cp .env.example .env       # fill VLLM_BASE_URL, HF_TOKEN, HF_REPO_ID
+cp .env.example .env       # fill VLLM_BASE_URL, VLLM_PORTS, HF_TOKEN, HF_REPO_ID
 mkdir -p models
 curl -L -o models/lid.176.bin \
   https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
 
 # Smoke test, no Hub upload:
 uv run gr-synth run --max-docs 25 --dry-run
+```
+
+`VLLM_BASE_URL` is the shared host (no port, no path); `VLLM_PORTS` is a
+comma-separated list of ports, one per deployment of the same model. Rephrase
+calls are round-robined across them, so adding a second port roughly doubles
+LLM throughput — just bump `CONCURRENCY` proportionally to keep both endpoints
+busy.
+
+```bash
 
 # Real run with verbose logs and a subset of prompts:
 uv run gr-synth run --verbose --prompts faq,math

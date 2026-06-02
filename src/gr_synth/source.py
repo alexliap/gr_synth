@@ -1,14 +1,19 @@
-"""Streaming source + pre-filters (guide §2)."""
+"""Streaming source + pre-filters."""
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
+import polars as pl
 import regex as re
 from datasets import load_dataset
 
 from .config import Settings
+
+logger = logging.getLogger(__name__)
 
 _MIN_CHARS = 200
 _MAX_CHARS = 20_000
@@ -26,12 +31,31 @@ _URL = re.compile(r"https?://\S+", re.IGNORECASE)
 
 
 def iter_source(settings: Settings) -> Iterator[dict]:
-    """Yield raw documents from the source dataset in streaming mode."""
+    """Yield raw documents from the source dataset.
+
+    Tries ``datasets.load_dataset`` first (streaming). If iteration fails
+    (e.g. pyarrow ``Couldn't deserialize thrift`` on column chunks >2 GB,
+    which trips on the single-row-group ``finepdfs_el`` shard), falls back to
+    a polars read of the local parquet files under
+    ``{source_name}/{source_config}/*.parquet``.
+    """
     if not settings.source_name:
         raise ValueError(
             "settings.source_name is empty — set SOURCE_NAME (e.g. HuggingFaceFW/fineweb-2)"
         )
 
+    try:
+        yield from _iter_via_datasets(settings)
+    except Exception as e:
+        logger.warning(
+            "datasets iteration failed (%s: %s); falling back to polars",
+            type(e).__name__,
+            e,
+        )
+        yield from _iter_via_polars(settings)
+
+
+def _iter_via_datasets(settings: Settings) -> Iterator[dict]:
     kwargs: dict[str, Any] = {"streaming": True}
     if settings.source_config:
         kwargs["name"] = settings.source_config
@@ -39,6 +63,20 @@ def iter_source(settings: Settings) -> Iterator[dict]:
 
     ds = load_dataset(settings.source_name, **kwargs)
     yield from ds
+
+
+def _iter_via_polars(settings: Settings) -> Iterator[dict]:
+    base = Path(settings.source_name)
+    src_dir = base / settings.source_config if settings.source_config else base
+    files = sorted(src_dir.glob("*.parquet"))
+    if not files:
+        raise FileNotFoundError(
+            f"polars fallback found no parquet files under {src_dir}"
+        )
+    for f in files:
+        df = pl.read_parquet(f)
+        for row in df.iter_rows(named=True):
+            yield row
 
 
 def pre_filter(doc: dict[str, Any]) -> bool:
@@ -74,7 +112,7 @@ def pre_filter(doc: dict[str, Any]) -> bool:
 
 
 def truncate_at_boundary(text: str, max_chars: int) -> str:
-    """Cut at the last newline before ``max_chars`` (guide §5.2 pattern).
+    """Cut at the last newline before ``max_chars``.
 
     If the slice has no newline we return it as-is rather than emptying the doc.
     """

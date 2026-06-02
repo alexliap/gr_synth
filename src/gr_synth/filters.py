@@ -1,10 +1,8 @@
-"""Output filters from guide §7.
+"""Output filters.
 
 Apply order (matters): lang-ID → preamble strip → format → length → near-dup.
 Each function is independent; ``apply_all`` chains them.
 """
-
-from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
@@ -14,16 +12,15 @@ import fasttext.FastText as _ft_module
 import numpy as np
 import regex as re
 from datasketch import MinHash, MinHashLSH
-from .types import Record
+
 from .config import Settings
+from .types import Record
 
 
 # fasttext-wheel is unmaintained and calls ``np.array(probs, copy=False)``
 # inside ``predict()``, which NumPy 2 banned. Monkey-patch with ``np.asarray``
 # at import time so callers don't need to know about it.
-def _patched_predict(
-    self, text, k=1, threshold=0.0, on_unicode_error="strict"
-):
+def _patched_predict(self, text, k=1, threshold=0.0, on_unicode_error="strict"):
     def _check(entry: str) -> str:
         if entry.find("\n") != -1:
             raise ValueError("predict processes one line at a time (remove '\\n')")
@@ -169,6 +166,7 @@ def validate_format(text: str, prompt_name: str) -> bool:
 
 # ---------- length sanity ----------------------------------------------
 
+
 def length_ok(text: str, settings: Settings) -> bool:
     return settings.min_output_chars <= len(text) <= settings.max_output_chars
 
@@ -221,9 +219,11 @@ class MinHashDeduper:
 
 # ---------- orchestration ---------------------------------------------------
 
+
 @dataclass
 class FilterStats:
-    """Drop counters, printed at shutdown so we can compare against guide §7 expectations."""
+    """Drop counters, printed at shutdown."""
+
     seen: int = 0
     dropped_lang: int = 0
     dropped_format: int = 0

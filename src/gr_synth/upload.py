@@ -24,6 +24,7 @@ tags:
   - synthetic
   - greek
   - pretraining
+  - nlp
 configs:
   - config_name: faq
     data_files: faq/*.parquet
@@ -49,7 +50,7 @@ originating config is preserved in the `source_data` column of every row.
 
 - [x] `wikipedia_el`
 - [x] `finewiki_el`
-- [ ] `finepdfs_el`
+- [x] `finepdfs_el`
 - [ ] `fineweb_hq_el`
 
 ## Infrastructure

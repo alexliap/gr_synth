@@ -7,7 +7,7 @@ import logging
 import random
 import statistics
 
-import pyarrow.parquet as pq
+import polars as pl
 import typer
 
 from .config import load_settings
@@ -84,8 +84,8 @@ def spot_check(
         if not shards:
             typer.echo(f"\n=== {prompt}: no shards yet ===")
             continue
-        table = pq.read_table([str(s) for s in shards])
-        rows = table.num_rows
+        df = pl.read_parquet([str(s) for s in shards])
+        rows = df.height
         total_size = sum(s.stat().st_size for s in shards)
         typer.echo(
             f"\n=== {prompt}: {len(shards)} shards "
@@ -94,7 +94,7 @@ def spot_check(
         if rows == 0:
             continue
         sample_idx = rng.sample(range(rows), k=min(per_prompt, rows))
-        sample = table.take(sample_idx).to_pylist()
+        sample = df[sample_idx].to_dicts()
         confs = [r.get("language_confidence") for r in sample if r.get("language_confidence") is not None]
         if confs:
             typer.echo(
