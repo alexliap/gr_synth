@@ -8,8 +8,6 @@ Usage:
     uv run --with polars python scripts/profile_prefilter.py finepdfs_el wikipedia_el [--limit 100]
 """
 
-from __future__ import annotations
-
 import argparse
 from collections import Counter
 from pathlib import Path

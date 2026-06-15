@@ -1,7 +1,5 @@
 """Per-prompt buffered shard writer. Flushes to parquet + Hub every N rows."""
 
-from __future__ import annotations
-
 import asyncio
 import re
 from collections.abc import Iterator

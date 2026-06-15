@@ -31,8 +31,8 @@ class Settings(BaseSettings):
     max_tokens: int = 4096
     repetition_penalty: float = 1.05
 
-    concurrency: int = 192
-    rows_per_flush: int = 1000
+    concurrency: int = 768
+    rows_per_flush: int = 4000
     local_shard_dir: Path = Path("./data/shards")
 
     source_name: str = ""

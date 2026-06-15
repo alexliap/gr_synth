@@ -1,7 +1,3 @@
-"""Typer CLI entry-point."""
-
-from __future__ import annotations
-
 import asyncio
 import logging
 import random
@@ -30,9 +26,7 @@ def run(
             "prompt not yet present in the on-disk shards (None = stream forever)."
         ),
     ),
-    dry_run: bool = typer.Option(
-        False, help="Write shards locally; skip Hub upload."
-    ),
+    dry_run: bool = typer.Option(False, help="Write shards locally; skip Hub upload."),
     prompts: str | None = typer.Option(
         None, help="Comma-separated prompt names (default: all four)."
     ),
@@ -95,7 +89,11 @@ def spot_check(
             continue
         sample_idx = rng.sample(range(rows), k=min(per_prompt, rows))
         sample = df[sample_idx].to_dicts()
-        confs = [r.get("language_confidence") for r in sample if r.get("language_confidence") is not None]
+        confs = [
+            r.get("language_confidence")
+            for r in sample
+            if r.get("language_confidence") is not None
+        ]
         if confs:
             typer.echo(
                 f"  language_confidence: min={min(confs):.3f} "
@@ -128,10 +126,18 @@ def _print_stats(stats: FilterStats) -> None:
     seen = max(stats.seen, 1)
     typer.echo("=== filter stats ===")
     typer.echo(f"  seen           : {stats.seen}")
-    typer.echo(f"  dropped_lang   : {stats.dropped_lang}  ({stats.dropped_lang / seen:.1%})")
-    typer.echo(f"  dropped_length : {stats.dropped_length}  ({stats.dropped_length / seen:.1%})")
-    typer.echo(f"  dropped_format : {stats.dropped_format}  ({stats.dropped_format / seen:.1%})")
-    typer.echo(f"  dropped_dup    : {stats.dropped_dup}  ({stats.dropped_dup / seen:.1%})")
+    typer.echo(
+        f"  dropped_lang   : {stats.dropped_lang}  ({stats.dropped_lang / seen:.1%})"
+    )
+    typer.echo(
+        f"  dropped_length : {stats.dropped_length}  ({stats.dropped_length / seen:.1%})"
+    )
+    typer.echo(
+        f"  dropped_format : {stats.dropped_format}  ({stats.dropped_format / seen:.1%})"
+    )
+    typer.echo(
+        f"  dropped_dup    : {stats.dropped_dup}  ({stats.dropped_dup / seen:.1%})"
+    )
     typer.echo(f"  kept           : {stats.kept}  ({stats.kept / seen:.1%})")
     if stats.lid_confidences:
         typer.echo(

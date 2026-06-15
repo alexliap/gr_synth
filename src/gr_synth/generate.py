@@ -1,7 +1,4 @@
 """Async fan-out pipeline: source → 4 prompts × N concurrent vLLM calls → filters → shards."""
-
-from __future__ import annotations
-
 import asyncio
 import logging
 from typing import Any

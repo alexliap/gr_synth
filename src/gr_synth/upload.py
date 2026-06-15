@@ -1,7 +1,5 @@
 """Hugging Face Hub uploader for finished parquet shards."""
 
-from __future__ import annotations
-
 import io
 import logging
 from pathlib import Path
@@ -51,7 +49,7 @@ originating config is preserved in the `source_data` column of every row.
 - [x] `wikipedia_el`
 - [x] `finewiki_el`
 - [x] `finepdfs_el`
-- [ ] `fineweb_hq_el`
+- [ ] `fineweb_hq_el` (in progress)
 
 ## Infrastructure
 

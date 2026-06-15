@@ -80,7 +80,13 @@ def _build_one_agent(base_url: str, settings: Settings) -> Agent:
             "temperature": 1,
             "top_p": 0.95,
             "max_tokens": settings.max_tokens,
-            "extra_body": {"repetition_penalty": settings.repetition_penalty},
+            "extra_body": {
+                "repetition_penalty": settings.repetition_penalty,
+                # Qwen3 reasoning models default to "thinking" mode, which wraps
+                # output in <think>...</think>. We only want the rephrased text,
+                # so disable it via the chat template kwarg vLLM forwards.
+                "chat_template_kwargs": {"enable_thinking": False},
+            },
         },
     )
 
