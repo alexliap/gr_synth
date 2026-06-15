@@ -26,7 +26,7 @@ def run(
             "prompt not yet present in the on-disk shards (None = stream forever)."
         ),
     ),
-    dry_run: bool = typer.Option(False, help="Write shards locally; skip Hub upload."),
+    dry_run: bool = typer.Option(True, help="Write shards locally; skip Hub upload."),
     prompts: str | None = typer.Option(
         None, help="Comma-separated prompt names (default: all four)."
     ),

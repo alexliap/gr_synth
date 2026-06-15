@@ -20,7 +20,7 @@ from .types import Record
 _PROMPT_NAMES: tuple[str, ...] = tuple(PROMPTS.keys())
 
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 # Dedicated logger so the progress heartbeat shows up even when --verbose is off.
 # cli.py attaches a handler and pins its level to INFO with propagate=False.
 progress_log = logging.getLogger("gr_synth.progress")
@@ -66,10 +66,10 @@ async def _process_one(
     """
     try:
         async with sem:
-            log.info(f"Rephrasing {source_id} using {prompt_name} ...")
+            logger.info(f"Rephrasing {source_id} using {prompt_name} ...")
             record = await rephrase(agent, prompt_name, doc_text, source_id, settings)
     except Exception:
-        log.exception(
+        logger.exception(
             "rephrase failed (source_id=%s, prompt=%s)", source_id, prompt_name
         )
         return
@@ -96,7 +96,7 @@ async def _process_one(
     try:
         await shard_mgr.add(record, status)
     except Exception:
-        log.exception(
+        logger.exception(
             "shard add failed (source_id=%s, prompt=%s)", source_id, prompt_name
         )
 
@@ -106,7 +106,7 @@ async def run_pipeline(
     *,
     max_docs: int | None = None,
     prompts: tuple[str, ...] | None = None,
-    dry_run: bool = False,
+    dry_run: bool = True,
 ) -> FilterStats:
     """End-to-end run. Returns the aggregate ``FilterStats`` so the CLI can summarise.
 
@@ -229,7 +229,7 @@ async def run_pipeline(
             done, _ = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
             for t in done:
                 if (exc := t.exception()) is not None:
-                    log.error("task crashed: %r", exc)
+                    logger.error("task crashed: %r", exc)
 
     if pending:
         await asyncio.gather(*pending, return_exceptions=True)

@@ -17,3 +17,5 @@ tmp/
 .vscode/
 nohup.out
 *.parquet
+.ipynb_checkpoints/
+*.ipynb

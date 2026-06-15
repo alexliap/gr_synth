@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)
 _MIN_CHARS = 200
 _MAX_CHARS = 20_000
 
+# Rows materialized per ``collect()`` in the polars fallback, so we never load a
+# whole parquet file into memory at once.
+_PARQUET_BATCH_ROWS = 10_000
+
 _GREEK_LETTER_RATIO = 0.6
 _MAX_URL_RATIO = 0.05  # > 5% of chars belonging to URLs marks a link farm
 _MAX_UPPER_RATIO = 0.40
@@ -72,9 +76,15 @@ def _iter_via_polars(settings: Settings) -> Iterator[dict]:
             f"polars fallback found no parquet files under {src_dir}"
         )
     for f in files:
-        df = pl.read_parquet(f)
-        for row in df.iter_rows(named=True):
-            yield row
+        lf = pl.scan_parquet(f)
+        offset = 0
+        while True:
+            batch = lf.slice(offset, _PARQUET_BATCH_ROWS).collect()
+            if batch.is_empty():
+                break
+            for row in batch.iter_rows(named=True):
+                yield row
+            offset += _PARQUET_BATCH_ROWS
 
 
 def pre_filter(doc: dict[str, Any]) -> bool:
