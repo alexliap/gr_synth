@@ -107,6 +107,7 @@ async def run_pipeline(
     max_docs: int | None = None,
     prompts: tuple[str, ...] | None = None,
     dry_run: bool = True,
+    rehydration: bool = True
 ) -> FilterStats:
     """End-to-end run. Returns the aggregate ``FilterStats`` so the CLI can summarise.
 
@@ -140,18 +141,19 @@ async def run_pipeline(
 
     # Rehydrate each prompt's MinHashDeduper from texts already on disk for
     # the current source_data, so near-duplicates across runs are caught.
-    for prompt_name in chosen:
-        if seen_counts.get(prompt_name, 0) == 0:
-            continue
-        rehydrated = 0
-        for text in shard_mgr.iter_existing_texts(prompt_name):
-            dedupers[prompt_name].add_and_check(text)
-            rehydrated += 1
-        progress_log.info(
-            "rehydrated dedup state for %s from %d existing records",
-            prompt_name,
-            rehydrated,
-        )
+    if rehydration:
+        for prompt_name in chosen:
+            if seen_counts.get(prompt_name, 0) == 0:
+                continue
+            rehydrated = 0
+            for text in shard_mgr.iter_existing_texts(prompt_name):
+                dedupers[prompt_name].add_and_check(text)
+                rehydrated += 1
+            progress_log.info(
+                "rehydrated dedup state for %s from %d existing records",
+                prompt_name,
+                rehydrated,
+            )
 
     pending: set[asyncio.Task[None]] = set()
     # Cap in-flight tasks so the producer doesn't outrun the workers and balloon memory.
