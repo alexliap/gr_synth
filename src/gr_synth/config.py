@@ -31,8 +31,8 @@ class Settings(BaseSettings):
     max_tokens: int = 4096
     repetition_penalty: float = 1.05
 
-    concurrency: int = 768
-    rows_per_flush: int = 4000
+    base_concurrency: int = 92
+    rows_per_flush: int = 8000
     local_shard_dir: Path = Path("./data/shards")
 
     source_name: str = ""
@@ -63,6 +63,10 @@ class Settings(BaseSettings):
                 data["vllm_ports"] = ports
                 data.pop("VLLM_PORTS", None)
         return data
+    
+    @property
+    def concurrency(self):
+        return self.base_concurrency * len(self.vllm_ports)
 
 
 def load_settings() -> Settings:

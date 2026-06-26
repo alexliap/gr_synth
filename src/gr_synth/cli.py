@@ -30,6 +30,7 @@ def run(
     prompts: str | None = typer.Option(
         None, help="Comma-separated prompt names (default: all four)."
     ),
+    rehydration: bool = typer.Option(False),
     verbose: bool = typer.Option(False, help="Enable INFO logging."),
 ) -> None:
     """Run the generation pipeline."""
@@ -53,7 +54,13 @@ def run(
         chosen = tuple(p.strip() for p in prompts.split(",") if p.strip())
 
     stats = asyncio.run(
-        run_pipeline(settings, max_docs=max_docs, prompts=chosen, dry_run=dry_run)
+        run_pipeline(
+            settings,
+            max_docs=max_docs,
+            prompts=chosen,
+            dry_run=dry_run,
+            rehydration=rehydration,
+        )
     )
     _print_stats(stats)
 
