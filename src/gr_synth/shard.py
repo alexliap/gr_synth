@@ -80,12 +80,24 @@ class ShardManager:
                 failed_prompt_dir, self._source_data
             )
 
-            self._seen[p] = ids | failed_ids
+            self._seen[p] = ids.union(failed_ids)
             self._next_shard[p] = next_idx
 
     def is_seen(self, prompt: str, source_id: str) -> bool:
-        """Return True if ``source_id`` is already in a flushed shard for ``prompt``."""
-        return source_id in self._seen[prompt]
+        """Return True if ``source_id`` is already seen for ``prompt``; otherwise
+        reserve it (add to the in-memory set) and return False.
+
+        Synchronous and called only from the single producer coroutine, so the
+        check-and-add is atomic w.r.t. other coroutines (they yield only at
+        await). Reserving here — before the id is scheduled for rephrasing —
+        closes the race where many concurrent tasks for the same id all passed a
+        read-only gate before any of them recorded itself via ``add``.
+        """
+        seen = self._seen[prompt]
+        if source_id in seen:
+            return True
+        seen.add(source_id)
+        return False
 
     def seen_counts(self) -> dict[str, int]:
         """Per-prompt count of source_ids already on disk (for startup logging)."""

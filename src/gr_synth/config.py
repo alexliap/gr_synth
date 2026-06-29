@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     minhash_perm: int = 128
 
     progress_every: int = 2000
-    skip_log_every: int = 1000
+    skip_log_every: int = 2000
 
     @model_validator(mode="before")
     @classmethod
